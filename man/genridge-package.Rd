@@ -8,14 +8,17 @@ Generalized ridge trace plots for ridge regression
 \description{
 The genridge package introduces generalizations of the standard univariate
 	ridge trace plot used in ridge regression and related methods.  These graphical methods
-	show both bias and precision, by plotting the covariance ellipsoids of the estimated
-	coefficients, rather than just the estimates themselves.}
+	show both bias (actually, shrinkage) and precision, by plotting the covariance ellipsoids of the estimated
+	coefficients, rather than just the estimates themselves.
+	2D and 3D plotting methods are provided,
+	both in the space of the predictor variables and in the transformed space of the PCA/SVD of the
+	predictors.}
 \details{
 \tabular{ll}{
 Package: \tab genridge\cr
 Type: \tab Package\cr
-Version: \tab 0.5-0\cr
-Date: \tab 2011-08-22\cr
+Version: \tab 0.6-0\cr
+Date: \tab 2011-12-04\cr
 License: \tab GPL version 2 or newer\cr
 LazyLoad: \tab yes\cr
 }
@@ -34,8 +37,19 @@ This provides the support for the main plotting functions in the package:
 
 \code{\link{pairs.ridge}}: All pairwise bivariate ridge trace plots
 
+\code{\link{plot3d.ridge}}: 3D ridge trace plots
+
 \code{\link{traceplot}}: Traditional univariate ridge trace plots
 
+In addition, the function \code{\link{pca.ridge}} transforms the coefficients
+and covariance matrices of a \code{ridge} object from predictor space to the
+equivalent, but more interesting space of the PCA of \eqn{X^T X} or the
+SVD of \bold{X}.  
+The main plotting functions also work for these objects,
+of class \code{c("ridge", "pcaridge")}.
+
+Finally, the functions \code{\link{precision}} and \code{\link{vif.ridge}}
+provide other useful measures and plots.
 }
 
 \author{
@@ -46,7 +60,7 @@ Maintainer: Michael Friendly <friendly@yorku.ca>
 \references{
 Friendly, M. (2011).
 The Generalized Ridge Trace Plot: Visualizing Bias and Precision.
-In preparation.
+Submitted, JCGS.
 
 Arthur E. Hoerl and Robert W. Kennard (1970).
 Ridge Regression: Biased Estimation for Nonorthogonal Problems,
