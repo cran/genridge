@@ -15,14 +15,21 @@ shrinkage of the parameters in a ridge regression model.
 
 precision(object, ...)
 
-\method{precision}{ridge}(object, ...)
-\method{precision}{lm}(object, ...)
+\method{precision}{ridge}(object, det.fun=c("log","root"), normalize=TRUE, ...)
+\method{precision}{lm}(object, det.fun=c("log","root"), normalize=TRUE, ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
 
   \item{object}{
 An object of class \code{ridge} or \code{lm}
+}
+  \item{det.fun}{
+Function to be applied to the determinants of the covariance matrices, one of
+\code{c("log","root")}.
+}
+  \item{normalize}{
+If \code{TRUE} the length of the coefficient vector is normalized to a maximum of 1.0.
 }
   \item{\dots}{
 Other arguments (currently unused)
@@ -35,10 +42,11 @@ covariance matrix of the parameters are calculated. Let \eqn{V_k} be
 the covariance matrix for a given ridge constant, and let
 \eqn{\lambda_i , i= 1, \dots p} be its eigenvalues
 \enumerate{
-         \item \eqn{\log | V_k | = \log \prod \lambda} measures the (log) volume of the covariance ellipsoid
-         and corresponds approximately to Wilks' Lambda criterion
-         \item \eqn{ trace( V_k ) =  \sum \lambda} corresponds approximately to Pillai's trace criterion
-         \item \eqn{ \lambda_1 =  max (\lambda)} corresponds approximately to Roy's largest root criterion.
+         \item \eqn{\log | V_k | = \log \prod \lambda} or \eqn{|V_k|^{1/p} =(\prod \lambda)^{1/p}}
+         measures the linearized volume of the covariance ellipsoid
+         and corresponds conceptually to Wilks' Lambda criterion
+         \item \eqn{ trace( V_k ) =  \sum \lambda} corresponds conceptually to Pillai's trace criterion
+         \item \eqn{ \lambda_1 =  max (\lambda)} corresponds to Roy's largest root criterion.
        }
 
 }
@@ -47,10 +55,10 @@ A data.frame with the following columns
 %%  If it is a LIST, use
   \item{lambda}{The ridge constant}
   \item{df}{The equivalent effective degrees of freedom}
-  \item{log.det}{The log determinant of the covariance matrix}
+  \item{det}{The \code{det.fun} function of the determinant of the covariance matrix}
   \item{trace}{The trace of the covariance matrix}
   \item{max.eig}{Maximum eigen value of the covariance matrix}
-  \item{norm.beta}{The root mean square of the estimated coefficients}
+  \item{norm.beta}{The root mean square of the estimated coefficients, possibly normalized}
 %% ...
 }
 %\references{
@@ -76,11 +84,29 @@ longley.X <- data.matrix(longley[, c(2:6,1)])
 
 lambda <- c(0, 0.005, 0.01, 0.02, 0.04, 0.08)
 lridge <- ridge(longley.y, longley.X, lambda=lambda)
+clr <- c("black", rainbow(length(lambda)-1, start=.6, end=.1))
 coef(lridge)
 
 (pdat <- precision(lridge))
-with(pdat, plot(norm.beta, log.det, type="b"))
+# plot log |Var(b)| vs. length(beta)
+with(pdat, {
+	plot(norm.beta, det, type="b", 
+	cex.lab=1.25, pch=16, cex=1.5, col=clr, lwd=2,
+	xlab='shrinkage: ||b|| / max(||b||)',
+	ylab='variance: log |Var(b)|')
+	text(norm.beta, det, lambda, cex=1.25, pos=c(rep(2,length(lambda)-1),4))
+	text(min(norm.beta), max(det), "Variance vs. Shrinkage", cex=1.5, pos=4)
+	})
 
+# plot trace[Var(b)] vs. length(beta)
+with(pdat, {
+	plot(norm.beta, trace, type="b",
+	cex.lab=1.25, pch=16, cex=1.5, col=clr, lwd=2,
+	xlab='shrinkage: ||b|| / max(||b||)',
+	ylab='variance: trace [Var(b)]')
+	text(norm.beta, trace, lambda, cex=1.25, pos=c(2, rep(4,length(lambda)-1)))
+#	text(min(norm.beta), max(det), "Variance vs. Shrinkage", cex=1.5, pos=4)
+	})
 
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

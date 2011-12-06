@@ -1,5 +1,14 @@
+# for pcaridge objects, default to last 2 variables
+plot.pcaridge <-
+		function(x, variables=(p-1):p, labels=NULL, ...) {
+	p <- dim(coef(x))[2]
+	plot.ridge(x, variables, labels=labels, ...)
+}
+
 plot.ridge <-
-function(x, variables=1:2, radius=1, lwd=2, lty=1, xlim, ylim,
+function(x, variables=1:2, radius=1, which.lambda=1:length(x$lambda), 
+		labels=lambda, pos=3, cex=1.2,
+		lwd=2, lty=1, xlim, ylim,
 		col = c("black", "red", "darkgreen", "blue","darkcyan","magenta", "brown","darkgray"), 
 		center.pch = 16, center.cex=1.5,
 		fill=FALSE, fill.alpha=0.3, ref=TRUE, ref.col=gray(.70), ...) {
@@ -28,12 +37,12 @@ function(x, variables=1:2, radius=1, lwd=2, lty=1, xlim, ylim,
 		vars <- vnames[variables]
 	}
 	if(length(variables)>2) {
-		warning("Only two variables will be plotted")
+		warning("Only two variables will be plotted. Perhaps you want plot3d.ridge()")
 		variables <- variables[1:2]
 	}
-	lambda <- x$lambda
-	coef <- x$coef[,variables]
-	cov <- x$cov
+	lambda <- x$lambda[which.lambda]
+	coef <- x$coef[which.lambda,variables]
+	cov <- x$cov[which.lambda]
 	n.ell <- length(lambda)
 
 	ells <- as.list(rep(0, n.ell))
@@ -61,5 +70,6 @@ function(x, variables=1:2, radius=1, lwd=2, lty=1, xlim, ylim,
 #		lines(ells[[i]], col=col[i], lwd=lwd[i], lty=lty[i])
 		polygon(ells[[i]], col=fill.col[i], border=col[i],  lty=lty[i], lwd=lwd[i])
 	}
+	if(!is.null(labels)) text(coef, labels=labels, pos=pos, cex=cex)
 }
 

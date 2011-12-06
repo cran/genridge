@@ -1,5 +1,7 @@
 \name{plot3d.ridge}
+\alias{plot3d}
 \alias{plot3d.ridge}
+\alias{plot3d.pcaridge}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
 3D Ridge Trace Plots
@@ -16,29 +18,43 @@ The size and shapes of the covariance ellipsoids show directly the effect on
 precision of the estimates as a function of the ridge tuning constant.
 }
 \usage{
-plot3d.ridge(x, variables = 1:3, radius = 1, lwd = 1, lty = 1, 
+plot3d(x, ...)
+
+\method{plot3d}{ridge}(x, variables = 1:3, radius = 1,  which.lambda=1:length(x$lambda),
+	lwd = 1, lty = 1, 
 	xlim, ylim, zlim, 
 	xlab, ylab, zlab, 
 	col = c("black", "red", "darkgreen", "blue", "darkcyan", "magenta", "brown", "darkgray"), 
-	labels = x$lambda, 
+	labels = lambda, 
 	ref = TRUE, ref.col = gray(0.7), 
 	segments = 40, shade = TRUE, shade.alpha = 0.1, 
 	wire = FALSE, aspect=1, add = FALSE, ...)
 
+\method{plot3d}{pcaridge}(x, variables = (p-2):p, ...)
+
 }
+
+
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{x}{
-A \code{ridge} object, as fit by \code{\link{ridge}}
+A \code{ridge} object, as fit by \code{\link{ridge}} or a \code{pcaridge} object
+as transformed by \code{\link{pca.ridge}}
 }
   \item{variables}{
 Predictors in the model to be displayed in the plot: an integer or character
 vector of length 3, giving the indices or names of the variables.
+Defaults to the first three predictors for \code{ridge} objects or the
+\emph{last} three dimensions for \code{pcaridge} objects.
 }
   \item{radius}{
 Radius of the ellipse-generating circle for the covariance ellipsoids. 
 The default, \code{radius=1} gives a standard \dQuote{unit} ellipsoid.
 Typically, \code{radius<1} gives less cluttered displays.
+}
+  \item{which.lambda}{
+A vector of indices used to select the values of \code{lambda} for which ellipsoids are plotted.
+The default is to plot ellipsoids for all values of \code{lambda} in the \code{ridge} object.
 }
   \item{lwd, lty}{
 Line width and line type for the covariance ellipsoids. Recycled as necessary.
@@ -87,7 +103,8 @@ Other arguments passed down
 }
 }
 \details{
-None yet.
+\code{plot3d.ridge} and \code{plot3d.pcaridge} differ only in the defaults for the variables
+plotted.
 }
 \value{
 None
@@ -123,7 +140,11 @@ lambda <- c(0, 0.005, 0.01, 0.02, 0.04, 0.08)
 lambdaf <- c("0", ".005", ".01", ".02", ".04", ".08")
 lridge <- ridge(longley.y, longley.X, lambda=lambda)
 
-plot3d.ridge(lridge, var=c(1,4,5), radius=0.5)
+plot3d(lridge, var=c(1,4,5), radius=0.5)
+
+# view in SVD/PCA space
+plridge <- pca.ridge(lridge)
+plot3d(plridge, radius=0.5)
 
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

@@ -1,5 +1,6 @@
 \name{plot.ridge}
 \alias{plot.ridge}
+\alias{plot.pcaridge}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
 Bivariate Ridge Trace Plots
@@ -17,9 +18,13 @@ precision of the estimates as a function of the ridge tuning constant.
 
 }
 \usage{
-\method{plot}{ridge}(x, variables = 1:2, radius = 1, lwd = 2, lty = 1, xlim, ylim, 
+\method{plot}{ridge}(x, variables = 1:2, radius = 1, which.lambda=1:length(x$lambda),
+   labels=lambda, pos=3, cex=1.2,
+   lwd = 2, lty = 1, xlim, ylim, 
    col = c("black", "red", "darkgreen", "blue", "darkcyan", "magenta", "brown", "darkgray"), 
    center.pch = 16, center.cex = 1.5, fill = FALSE, fill.alpha = 0.3, ref=TRUE, ref.col=gray(.70), ...)
+
+\method{plot}{pcaridge}(x, variables = (p-1):p, labels=NULL, ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -29,17 +34,32 @@ A \code{ridge} object, as fit by \code{\link{ridge}}
   \item{variables}{
 Predictors in the model to be displayed in the plot: an integer or character
 vector of length 2, giving the indices or names of the variables.
+Defaults to the first two predictors for \code{ridge} objects or the
+\emph{last} two dimensions for \code{pcaridge} objects.
+
 }
   \item{radius}{
 Radius of the ellipse-generating circle for the covariance ellipsoids.
 The default, \code{radius=1} gives a standard \dQuote{unit} ellipsoid.
-Typically, \code{radius<1} gives less cluttered displays.  
+Typically, values \code{radius<1} gives less cluttered displays.  
+}
+  \item{which.lambda}{
+A vector of indices used to select the values of \code{lambda} for which ellipses are plotted.
+The default is to plot ellipses for all values of \code{lambda} in the \code{ridge} object.
+}
+  \item{labels}{
+A vector of character strings or expressions used as labels for the ellipses.
+Use \code{labels=NULL} to suppress these.
+}
+  \item{pos, cex}{
+Scalars or vectors of positions (relative to the ellipse centers)
+and character size used to label the ellipses
 }
   \item{lwd, lty}{
 Line width and line type for the covariance ellipsoids. Recycled as necessary.
 }
   \item{xlim, ylim}{
-X, Y limits for the plot.  If missing, the range of the covariance ellipsoids is used.
+X, Y limits for the plot, each a vector of length 2.  If missing, the range of the covariance ellipsoids is used.
 }
   \item{col}{
 A numeric or character vector giving the colors used to plot the covariance ellipsoids.
@@ -90,7 +110,7 @@ Michael Friendly
 \seealso{
 \code{\link{ridge}} for details on ridge regression as implemented here
 
-\code{\link{pairs.ridge}}, \code{\link{traceplot}} and \code{\link{plot3d.ridge}} for other plotting methods
+\code{\link{pairs.ridge}}, \code{\link{traceplot}}, \code{\link{biplot.pcaridge}} and \code{\link{plot3d.ridge}} for other plotting methods
 }
 \examples{
 longley.y <- longley[, "Employed"]

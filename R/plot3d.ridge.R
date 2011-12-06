@@ -1,10 +1,24 @@
+plot3d <-
+		function (x, ...) {
+	UseMethod("plot3d")
+}
+
+# for pcaridge objects, default to last 3 variables
+plot3d.pcaridge <-
+		function(x, variables=(p-2):p, ...) {
+	p <- dim(coef(x))[2]
+	plot3d.ridge(x, variables, ...)
+}
+
+
 plot3d.ridge <-
-function(x, variables=1:3, radius=1, lwd=1, lty=1, 
+function(x, variables=1:3, radius=1, which.lambda=1:length(x$lambda),
+		lwd=1, lty=1, 
 		xlim, ylim, zlim,
 		xlab, ylab, zlab,
 		col = c("black", "red", "darkgreen", "blue","darkcyan","magenta", "brown","darkgray"),
 #		c("black", rainbow(n.ell, start=.6, end=.1)),    # or, use rainbow colors by default?
-		labels=x$lambda, 
+		labels=lambda, 
 #		center.pch = 16, center.cex=1.5, 
 		ref=TRUE, ref.col=gray(.70), 
 		segments=40,          # line segments in each ellipse
@@ -24,6 +38,8 @@ function(x, variables=1:3, radius=1, lwd=1, lty=1,
 		ecoord2 <- function(p) c(cos(p[1])*sin(p[2]), sin(p[1])*sin(p[2]), cos(p[2]))
 		v <- t(apply(expand.grid(degvec,degvec), 1, ecoord2))
 
+		warn <- options(warn=-1)
+		on.exit(options(warn))
 		Q <- chol(shape, pivot=TRUE)
 		order <- order(attr(Q, "pivot"))
 		v <- center + radius * t(v %*% Q[, order])
@@ -66,10 +82,10 @@ function(x, variables=1:3, radius=1, lwd=1, lty=1,
 		warning("Only three variables will be plotted")
 		variables <- variables[1:3]
 	}
-	lambda <- x$lambda
 	vnames <- vnames[variables]
-	coef <- x$coef[,variables]
-	cov <- x$cov
+	lambda <- x$lambda[which.lambda]
+	coef <- x$coef[which.lambda,variables]
+	cov <- x$cov[which.lambda]
 	n.ell <- length(lambda)
 	if (missing(xlab)) xlab <- vars[1]
 	if (missing(ylab)) ylab <- vars[2]
