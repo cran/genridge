@@ -1,7 +1,19 @@
-# Simple version of a plot method to add variable vectors showing the 
+# Plot methods to add variable vectors showing the 
 # original variables in PCA/SVD space.
 
 # Thx: Uwe Ligges for the code for calculating scale...
+
+# for ridge objects, default to first 2 variables
+# and show PCA vectors in variable space....
+biplot.ridge <-
+		function(x, variables=1:2, xlab, ylab, ...) {
+	x$svd.V <- t(x$svd.V)
+	vnames <- colnames(coef(x))[variables]
+	if(missing(xlab)) xlab=vnames[1]
+	if(missing(ylab)) ylab=vnames[2]
+	
+	biplot.pcaridge(x, variables, xlab=xlab, ylab=ylab, ...)
+}
 
 biplot.pcaridge <- function(x, variables=(p-1):p, labels=NULL, asp=1, 
 		origin, scale, 
