@@ -86,6 +86,7 @@ traceplot(dridge, X="df")
 vif(dridge)
 pairs(dridge, radius=0.5)
 
+\donttest{
 plot3d(dridge, radius=0.5, labels=dridge$df)
 
 # transform to PCA/SVD space
@@ -96,5 +97,7 @@ biplot(dpridge, radius=0.5, labels=dpridge$df)
 
 # show PCA vectors in variable space
 biplot(dridge, radius=0.5, labels=dridge$df)
+}
+
 }
 \keyword{datasets}

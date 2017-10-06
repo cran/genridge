@@ -17,13 +17,13 @@ The genridge package introduces generalizations of the standard univariate
 \tabular{ll}{
 Package: \tab genridge\cr
 Type: \tab Package\cr
-Version: \tab 0.6-5\cr
+Version: \tab 0.6-6\cr
 Date: \tab 2014-11-24\cr
 License: \tab GPL version 2 or newer\cr
 LazyLoad: \tab yes\cr
 }
 This package provides computational support
-for the graphical methods described in Friendly (2012).
+for the graphical methods described in Friendly (2013).
 Ridge regression models may be fit using the function \code{\link{ridge}},
 which incorporates features of  \code{\link[MASS]{lm.ridge}} and
  \code{\link[ElemStatLearn]{simple.ridge}}.  In particular, the shrinkage
@@ -62,9 +62,11 @@ Michael Friendly
 Maintainer: Michael Friendly <friendly@yorku.ca>
 }
 \references{
-Friendly, M. (2012).
-The Generalized Ridge Trace Plot: Visualizing Bias and Precision.
-In press, \emph{Journal of Computational and Graphical Statistics}, 21.
+Friendly, M. (2013).
+The Generalized Ridge Trace Plot: Visualizing Bias \emph{and} Precision.
+\emph{Journal of Computational and Graphical Statistics}, \bold{22}(1), 50-68,
+doi:10.1080/10618600.2012.681237,
+\url{http://euclid.psych.yorku.ca/datavis/papers/genridge.pdf}
 
 Arthur E. Hoerl and Robert W. Kennard (1970).
 Ridge Regression: Biased Estimation for Nonorthogonal Problems,
