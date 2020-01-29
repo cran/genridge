@@ -95,15 +95,14 @@ lridge <- ridge(longley.y, longley.X, lambda=lambda)
 
 pairs(lridge, radius=0.5, diag.cex=1.75)
 
-if (require("ElemStatLearn")) {
-	py <- prostate[, "lpsa"]
-	pX <- data.matrix(prostate[, 1:8])
-	pridge <- ridge(py, pX, df=8:1)
-	
-	pairs(pridge)
+data(prostate)
+py <- prostate[, "lpsa"]
+pX <- data.matrix(prostate[, 1:8])
+pridge <- ridge(py, pX, df=8:1)
+
+pairs(pridge)
 }
 
-}
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
 \keyword{hplot}
