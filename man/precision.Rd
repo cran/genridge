@@ -20,7 +20,7 @@ normalized to a maximum of 1.0.}
 \item{\dots}{Other arguments (currently unused)}
 }
 \value{
-A data.frame with the following columns 
+An object of class \code{c("precision", "data.frame")} with the following columns: 
 \item{lambda}{The ridge constant} 
 \item{df}{The equivalent effective degrees of freedom} 
 \item{det}{The \code{det.fun} function of the determinant of the covariance matrix} 
@@ -29,22 +29,16 @@ A data.frame with the following columns
 \item{norm.beta}{The root mean square of the estimated coefficients, possibly normalized}
 }
 \description{
-Calculates measures of precision based on the size of the estimated
-covariance matrices of the parameters and shrinkage of the parameters in a
-ridge regression model. %% ~~ A concise (1-5 lines) description of what the
-function does. ~~
-
 Three measures of (inverse) precision based on the \dQuote{size} of the
 covariance matrix of the parameters are calculated. Let \eqn{V_k} be the
 covariance matrix for a given ridge constant, and let \eqn{\lambda_i , i= 1,
-\dots p} be its eigenvalues 
+\dots p} be its eigenvalues. Then the variance (1/precision) measures are: 
 \enumerate{ 
-  \item \eqn{\log | V_k | = \log \prod \lambda} or \eqn{|V_k|^{1/p} =(\prod \lambda)^{1/p}} 
-       measures the linearized
-       volume of the covariance ellipsoid and corresponds conceptually to Wilks'
+  \item \code{"det"}: \eqn{\log | V_k | = \log \prod \lambda} or \eqn{|V_k|^{1/p} =(\prod \lambda)^{1/p}} 
+       measures the linearized volume of the covariance ellipsoid and corresponds conceptually to Wilks'
        Lambda criterion 
-  \item \eqn{ trace( V_k ) = \sum \lambda} corresponds conceptually to Pillai's trace criterion 
-  \item \eqn{ \lambda_1 = max (\lambda)} corresponds to Roy's largest root criterion.  
+  \item \code{"trace"}: \eqn{ \text{trace}( V_k ) = \sum \lambda} corresponds conceptually to Pillai's trace criterion 
+  \item \code{"max.eig"}: \eqn{ \lambda_1 = \max (\lambda)} corresponds to Roy's largest root criterion.  
 }
 }
 \note{
@@ -59,6 +53,11 @@ longley.X <- data.matrix(longley[, c(2:6,1)])
 
 lambda <- c(0, 0.005, 0.01, 0.02, 0.04, 0.08)
 lridge <- ridge(longley.y, longley.X, lambda=lambda)
+
+# same, using formula interface
+lridge <- ridge(Employed ~ GNP + Unemployed + Armed.Forces + Population + Year + GNP.deflator, 
+		data=longley, lambda=lambda)
+
 clr <- c("black", rainbow(length(lambda)-1, start=.6, end=.1))
 coef(lridge)
 
@@ -86,7 +85,7 @@ with(pdat, {
 
 }
 \seealso{
-\code{\link{ridge}},
+\code{\link{ridge}}, \code{\link{plot.precision}}
 }
 \author{
 Michael Friendly

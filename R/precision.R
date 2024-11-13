@@ -1,3 +1,4 @@
+# Nov 10, 2024: result gains class "precision" for a plot method
 
 #' Measures of Precision and Shrinkage for Ridge Regression
 #' 
@@ -5,22 +6,17 @@
 #' @aliases precision precision.ridge precision.lm
 #'
 #' @description
-#' Calculates measures of precision based on the size of the estimated
-#' covariance matrices of the parameters and shrinkage of the parameters in a
-#' ridge regression model. %% ~~ A concise (1-5 lines) description of what the
-#' function does. ~~
 #' 
 #' Three measures of (inverse) precision based on the \dQuote{size} of the
 #' covariance matrix of the parameters are calculated. Let \eqn{V_k} be the
 #' covariance matrix for a given ridge constant, and let \eqn{\lambda_i , i= 1,
-#' \dots p} be its eigenvalues 
+#' \dots p} be its eigenvalues. Then the variance (1/precision) measures are: 
 #' \enumerate{ 
-#'   \item \eqn{\log | V_k | = \log \prod \lambda} or \eqn{|V_k|^{1/p} =(\prod \lambda)^{1/p}} 
-#'        measures the linearized
-#'        volume of the covariance ellipsoid and corresponds conceptually to Wilks'
+#'   \item \code{"det"}: \eqn{\log | V_k | = \log \prod \lambda} or \eqn{|V_k|^{1/p} =(\prod \lambda)^{1/p}} 
+#'        measures the linearized volume of the covariance ellipsoid and corresponds conceptually to Wilks'
 #'        Lambda criterion 
-#'   \item \eqn{ trace( V_k ) = \sum \lambda} corresponds conceptually to Pillai's trace criterion 
-#'   \item \eqn{ \lambda_1 = max (\lambda)} corresponds to Roy's largest root criterion.  
+#'   \item \code{"trace"}: \eqn{ \text{trace}( V_k ) = \sum \lambda} corresponds conceptually to Pillai's trace criterion 
+#'   \item \code{"max.eig"}: \eqn{ \lambda_1 = \max (\lambda)} corresponds to Roy's largest root criterion.  
 #' }
 #' 
 #' @param object An object of class \code{ridge} or \code{lm}
@@ -30,7 +26,7 @@
 #'        normalized to a maximum of 1.0.
 #' @param \dots Other arguments (currently unused)
 #' 
-#' @return A data.frame with the following columns 
+#' @return An object of class \code{c("precision", "data.frame")} with the following columns: 
 #' \item{lambda}{The ridge constant} 
 #' \item{df}{The equivalent effective degrees of freedom} 
 #' \item{det}{The \code{det.fun} function of the determinant of the covariance matrix} 
@@ -44,7 +40,7 @@
 #' 
 #' @author Michael Friendly
 #' @export
-#' @seealso \code{\link{ridge}},
+#' @seealso \code{\link{ridge}}, \code{\link{plot.precision}}
 #' @keywords regression models
 #' @examples
 #' 
@@ -53,6 +49,11 @@
 #' 
 #' lambda <- c(0, 0.005, 0.01, 0.02, 0.04, 0.08)
 #' lridge <- ridge(longley.y, longley.X, lambda=lambda)
+#'
+#' # same, using formula interface
+#' lridge <- ridge(Employed ~ GNP + Unemployed + Armed.Forces + Population + Year + GNP.deflator, 
+#' 		data=longley, lambda=lambda)
+#' 
 #' clr <- c("black", rainbow(length(lambda)-1, start=.6, end=.1))
 #' coef(lridge)
 #' 
@@ -101,12 +102,14 @@ precision.ridge <- function(object,
 	meig <- unlist(lapply(V, maxeig))	
 	norm <- sqrt(rowMeans(coef(object)^2))
 	if (normalize) norm <- norm / max(norm)
-	data.frame(lambda=object$lambda, 
+	res <- data.frame(lambda=object$lambda, 
 	           df=object$df, 
 	           det=ldet, 
 	           trace=trace, 
 	           max.eig=meig, 
 	           norm.beta=norm)
+	class(res) <- c("precision", "data.frame")
+	res
 }
 
 #' @exportS3Method 
@@ -131,5 +134,7 @@ precision.lm <- function(object, det.fun=c("log","root"), normalize=TRUE, ...) {
 	            trace=trace, 
 	            max.eig=meig, 
 	            norm.beta=norm)
+	class(res) <- c("precision", "data.frame")
 	unlist(res)
 }
+
