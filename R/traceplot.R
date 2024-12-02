@@ -1,3 +1,5 @@
+# TODO: allow for a longer list of colors
+
 #' Univariate Ridge Trace Plots
 #' 
 #' The \code{traceplot} function extends and simplifies the univariate ridge
@@ -17,7 +19,7 @@
 #'        curves.  Recycled as necessary.
 #' @param xlab Label for horizontal axis
 #' @param ylab Label for vertical axis
-#' @param xlim,ylim x, y limits for the plot
+#' @param xlim,ylim x, y limits for the plot. You may need to adjust these to allow for the variable labels.
 #' @param \dots Other arguments passed to \code{\link[graphics]{matplot}}
 #' @return None. Used for its side effect of plotting.
 #' @author Michael Friendly

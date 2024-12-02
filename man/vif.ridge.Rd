@@ -2,29 +2,75 @@
 % Please edit documentation in R/vif.ridge.R
 \name{vif.ridge}
 \alias{vif.ridge}
+\alias{print.vif.ridge}
+\alias{plot.vif.ridge}
 \title{Variance Inflation Factors for Ridge Regression}
 \usage{
 \method{vif}{ridge}(mod, ...)
+
+\method{print}{vif.ridge}(x, digits = max(4, getOption("digits") - 5), ...)
+
+\method{plot}{vif.ridge}(
+  x,
+  X = c("lambda", "df"),
+  Y = c("vif", "sqrt"),
+  col = c("black", "red", "darkgreen", "blue", "darkcyan", "magenta", "brown",
+    "darkgray"),
+  pch = c(15:18, 7, 9, 12, 13),
+  xlab,
+  ylab,
+  xlim,
+  ylim,
+  ...
+)
 }
 \arguments{
-\item{mod}{A \code{ridge} object}
+\item{mod}{A \code{"ridge"} object computed by \code{\link{ridge}}}
 
-\item{\dots}{Other arguments (unused)}
+\item{\dots}{Other arguments passed to methods}
+
+\item{x}{A \code{ridge} object, as fit by \code{\link{ridge}}}
+
+\item{digits}{Number of digits to display in the \code{print} method}
+
+\item{X}{What to plot as the horizontal coordinate, one of \code{c("lambda", "df")}}
+
+\item{Y}{What to plot as the vertical coordinate, one of \code{c("vif", "sqrt")}, where the latter plots \eqn{\sqrt{VIF}}.}
+
+\item{col}{A numeric or character vector giving the colors used to plot the
+ridge trace curves.  Recycled as necessary.}
+
+\item{pch}{Vector of plotting characters used to plot the ridge trace
+curves.  Recycled as necessary.}
+
+\item{xlab}{Label for horizontal axis}
+
+\item{ylab}{Label for vertical axis}
+
+\item{xlim, ylim}{x, y limits for the plot. You may need to adjust these to allow for the variable labels.}
 }
 \value{
-Returns a matrix of variance inflation factors of the same size and
+\code{vif} returns a \code{"vif.ridge"} object, which is a list of four components
+  \item{vif}{a data frame of the same size and
         shape as \code{coef{mod}}. The columns correspond to the predictors in the
         model and the rows correspond to the values of \code{lambda} in ridge
-        estimation.
+        estimation.}
+  \item{lambda}{the vector of ridge constants from the original call to \code{\link{ridge}} }
+  \item{df}{the vector of effective degrees of freedom corresponding to \code{lambda}}
+  \item{criteria}{the optimal values of \code{lambda}}
 }
 \description{
 The function \code{vif.ridge} calculates variance inflation factors for the
 predictors in a set of ridge regression models indexed by the
-tuning/shrinkage factor.
-}
-\details{
+tuning/shrinkage factor, returning one row for each value of the \eqn{\lambda} parameter.
+
 Variance inflation factors are calculated using the simplified formulation
 in Fox & Monette (1992).
+
+The \code{plot.vif.ridge} method plots variance inflation factors for a \code{"vif.ridge"} object
+in a similar style to what is provided by \code{\link{traceplot}}. That is, it plots the VIF for each
+coefficient in the model against either the ridge \eqn{\lambda} tuning constant or it's equivalent
+effective degrees of freedom.
 }
 \examples{
 
@@ -33,50 +79,43 @@ lmod <- lm(Employed ~ GNP + Unemployed + Armed.Forces + Population +
                       Year + GNP.deflator, data=longley)
 vif(lmod)
 
-longley.y <- longley[, "Employed"]
-longley.X <- data.matrix(longley[, c(2:6,1)])
-
 lambda <- c(0, 0.005, 0.01, 0.02, 0.04, 0.08)
-lridge <- ridge(longley.y, longley.X, lambda=lambda)
+lridge <- ridge(Employed ~ GNP + Unemployed + Armed.Forces + 
+                           Population + Year + GNP.deflator, 
+		             data=longley, lambda=lambda)
+
 coef(lridge)
 
-
+# get VIFs for the shrunk estimates
 vridge <- vif(lridge)
 vridge
+names(vridge)
+
+
 
 # plot VIFs
 pch <- c(15:18, 7, 9)
 clr <- c("black", rainbow(5, start=.6, end=.1))
 
-matplot(rownames(vridge), vridge, type='b', 
-	xlab='Ridge constant (k)', ylab="Variance Inflation", 
-	xlim=c(0, 0.08), 
-	col=clr, pch=pch, cex=1.2)
-text(0.0, vridge[1,], colnames(vridge), pos=4)
+plot(vridge, 
+     col=clr, pch=pch, cex = 1.2,
+     xlim = c(-0.02, 0.08))
 
-matplot(lridge$df, vridge, type='b', 
-	xlab='Degrees of freedom', ylab="Variance Inflation", 
-	col=clr, pch=pch, cex=1.2)
-text(6, vridge[1,], colnames(vridge), pos=2)
+plot(vridge, X = "df",
+     col=clr, pch=pch, cex = 1.2,
+     xlim = c(4, 6.5))
 
-# more useful to plot VIF on the sqrt scale
+# Better to plot sqrt(VIF). Plot against degrees of freedom
+plot(vridge, X = "df", Y="sqrt",
+     col=clr, pch=pch, cex = 1.2,
+     xlim = c(4, 6.5))
 
-matplot(rownames(vridge), sqrt(vridge), type='b', 
-	xlab='Ridge constant (k)', ylab=expression(sqrt(VIF)), 
-	xlim=c(-0.01, 0.08), 
-	col=clr, pch=pch, cex=1.2, cex.lab=1.25)
-text(-0.01, sqrt(vridge[1,]), colnames(vridge), pos=4, cex=1.2)
-
-matplot(lridge$df, sqrt(vridge), type='b', 
-	xlab='Degrees of freedom', ylab=expression(sqrt(VIF)), 
-	col=clr, pch=pch, cex=1.2, cex.lab=1.25)
-text(6, sqrt(vridge[1,]), colnames(vridge), pos=2, cex=1.2)
 
 
 }
 \references{
 Fox, J. and Monette, G. (1992). Generalized collinearity
-diagnostics. \emph{JASA}, \bold{87}, 178-183
+diagnostics. \emph{JASA}, \bold{87}, 178-183, \doi{10.1080/01621459.1992.10475190}.
 }
 \seealso{
 \code{\link[car]{vif}}, \code{\link{precision}}

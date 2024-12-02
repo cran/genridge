@@ -27,6 +27,8 @@
   ref.col = gray(0.7),
   ...
 )
+
+\method{plot}{pcaridge}(x, variables = (p - 1):p, labels = NULL, ...)
 }
 \arguments{
 \item{x}{A \code{ridge} object, as fit by \code{\link{ridge}}}
@@ -94,6 +96,9 @@ changes for other parameters.
 
 The size and shapes of the covariance ellipses show directly the effect on
 precision of the estimates as a function of the ridge tuning constant.
+
+\code{plot.pcaridge} does these bivariate ridge trace plots for \code{"pcaridge"} objects, defaulting to plotting the
+two smallest components.
 }
 \examples{
 
@@ -132,9 +137,9 @@ doi:10.1080/10618600.2012.681237,
 }
 \seealso{
 \code{\link{ridge}} for details on ridge regression as implemented
-here
+here; \code{\link{pairs.ridge}}, \code{\link{traceplot}}, for basic plots.
 
-\code{\link{pairs.ridge}}, \code{\link{traceplot}},
+\code{\link{pca.ridge}} for transformation of ridge regression estimates to PCA space.
 \code{\link{biplot.pcaridge}} and \code{\link{plot3d.ridge}} for other
 plotting methods
 }

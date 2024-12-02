@@ -1,4 +1,6 @@
+# DONE:  allow choice of log.det or det()^{1/p}
 # Nov 10, 2024: result gains class "precision" for a plot method
+# Mov 24, 2024: Add calc of norm.diff, improve documentation
 
 #' Measures of Precision and Shrinkage for Ridge Regression
 #' 
@@ -7,22 +9,37 @@
 #'
 #' @description
 #' 
+#' The goal of \code{precision} is to allow you to study the relationship between shrinkage of ridge
+#' regression coefficients and their precision directly by calculating measures of each.
+#' 
 #' Three measures of (inverse) precision based on the \dQuote{size} of the
-#' covariance matrix of the parameters are calculated. Let \eqn{V_k} be the
-#' covariance matrix for a given ridge constant, and let \eqn{\lambda_i , i= 1,
-#' \dots p} be its eigenvalues. Then the variance (1/precision) measures are: 
+#' covariance matrix of the parameters are calculated. Let \eqn{V_k \equiv \text{Var}(\mathbf{\beta}_k)} 
+#' be the covariance matrix for a given ridge constant, and let \eqn{\lambda_i , i= 1,
+#' \dots p} be its eigenvalues. Then the variance (= 1/precision) measures are: 
 #' \enumerate{ 
-#'   \item \code{"det"}: \eqn{\log | V_k | = \log \prod \lambda} or \eqn{|V_k|^{1/p} =(\prod \lambda)^{1/p}} 
+#'   \item \code{"det"}: \eqn{\log | V_k | = \log \prod \lambda} (with \code{det.fun = "log"}, the default)
+#'        or \eqn{|V_k|^{1/p} =(\prod \lambda)^{1/p}} (with \code{det.fun = "root"})
 #'        measures the linearized volume of the covariance ellipsoid and corresponds conceptually to Wilks'
 #'        Lambda criterion 
 #'   \item \code{"trace"}: \eqn{ \text{trace}( V_k ) = \sum \lambda} corresponds conceptually to Pillai's trace criterion 
 #'   \item \code{"max.eig"}: \eqn{ \lambda_1 = \max (\lambda)} corresponds to Roy's largest root criterion.  
 #' }
 #' 
+#' Two measures of shrinkage are also calculated:
+#' \itemize{
+#'    \item \code{norm.beta}: the root mean square of the coefficient vector \eqn{\lVert\mathbf{\beta}_k \rVert},
+#'         normalized to a maximum of 1.0 if \code{normalize == TRUE} (the default).
+#'    \item \code{norm.diff}: the root mean square of the difference from the OLS estimate
+#'         \eqn{\lVert \mathbf{\beta}_{\text{OLS}} - \mathbf{\beta}_k \rVert}. This measure is inversely related to \code{norm.beta}
+#' }
+#' 
+#' 
+#' A plot method, \code{\link{plot.precision}} facilitates making graphs of these quantities.
+#'
 #' @param object An object of class \code{ridge} or \code{lm}
 #' @param det.fun Function to be applied to the determinants of the covariance
 #'        matrices, one of \code{c("log","root")}.
-#' @param normalize If \code{TRUE} the length of the coefficient vector is
+#' @param normalize If \code{TRUE} the length of the coefficient vector \eqn{\mathbf{\beta}_k} is
 #'        normalized to a maximum of 1.0.
 #' @param \dots Other arguments (currently unused)
 #' 
@@ -33,6 +50,8 @@
 #' \item{trace}{The trace of the covariance matrix}
 #' \item{max.eig}{Maximum eigen value of the covariance matrix}
 #' \item{norm.beta}{The root mean square of the estimated coefficients, possibly normalized} 
+#' \item{norm.diff}{The root mean square of the difference between the OLS solution 
+#'       (\code{lambda = 0}) and ridge solutions} 
 #' 
 #' @note Models fit by \code{lm} and \code{ridge} use a different scaling for
 #' the predictors, so the results of \code{precision} for an \code{lm} model
@@ -84,7 +103,6 @@ precision <- function(object, det.fun, normalize, ...) {
 	UseMethod("precision")
 }
 
-# DONE:  allow choice of log.det or det()^{1/p}
 
 #' @exportS3Method 
 precision.ridge <- function(object, 
@@ -94,20 +112,40 @@ precision.ridge <- function(object,
 	maxeig <- function(x) max(eigen(x)$values)
 	
 	V <- object$cov
-	p <- ncol(coef(object))
+	b <- coef(object)
+	p <- ncol(b)
+
+	# calculate precision measure	
 	det.fun <- match.arg(det.fun)
 	ldet <- unlist(lapply(V, det))
 	ldet <- if(det.fun == "log") log(ldet) else ldet^(1/p)
+	
 	trace <- unlist(lapply(V, tr))
-	meig <- unlist(lapply(V, maxeig))	
+	meig <- unlist(lapply(V, maxeig))
+
+	# calculate shrinkage	
 	norm <- sqrt(rowMeans(coef(object)^2))
 	if (normalize) norm <- norm / max(norm)
+	
+	# calculate norm.diff: norm of (beta[lambda=0] - beta)
+	b0index <- which(object$lambda == 0)
+	if (b0index != 0) {
+	  b0 <- b[b0index, ]            # OLS estimate
+	  dif <- sweep(b, 2, b0)
+	  norm.diff <- sqrt(rowMeans(dif^2))
+	}
+	else {
+	  warning("There is no OLS solution (lambda==0), so can't calculate norm.diff")
+	  bias <- rep(NA, nrow(b))
+	}
+
 	res <- data.frame(lambda=object$lambda, 
 	           df=object$df, 
 	           det=ldet, 
 	           trace=trace, 
 	           max.eig=meig, 
-	           norm.beta=norm)
+	           norm.beta=norm,
+	           norm.diff=norm.diff)
 	class(res) <- c("precision", "data.frame")
 	res
 }

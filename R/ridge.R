@@ -40,6 +40,11 @@
 #' If an intercept is present in the model, its coefficient is not penalized. (If you want to penalize 
 #' an intercept, put in your own constant term and remove the intercept.)
 #' 
+#' The predictors are centered, but not (yet) scaled in this implementation. 
+#' 
+#' A number of the methods in the package assume that \code{lambda} is a vector of shrinkage constants
+#' increasing from \code{lambda[1] = 0}, or equivalently, a vector of \code{df} decreasing from \eqn{p}.
+#' 
 #' 
 #' @param y A numeric vector containing the response variable. NAs not allowed.
 #' @param X A matrix of predictor variables. NA's not allowed. Should not
@@ -96,6 +101,9 @@
 #' 
 #' Lawless, J.F., and Wang, P. (1976), "A Simulation Study of Ridge and Other
 #' Regression Estimators," \emph{Communications in Statistics}, 5, 307-323.
+#' 
+#' Golub G.H., Heath M., Wahba G. (1979) Generalized cross-validation as a method for choosing a good ridge parameter. 
+#' \emph{Technometrics}, \bold{21}:215–223. \doi{10.2307/1268518}
 #' @keywords models regression
 #' @examples
 #' 
@@ -221,6 +229,7 @@ ridge.default <-
 	y <- y - ym
 	#scale X, as in MASS::lm.ridge 
 	Xscale <- drop(rep(1/n, n) %*% X^2)^0.5
+#browser()
 	X <- as.matrix(X/rep(Xscale, rep(n, p)))
 	
 	XPX <- crossprod(X)
@@ -291,6 +300,9 @@ ridge.default <-
 
 
 
+#' @description
+#' \code{coef} extracts the estimated coefficients for each value of the shrinkage factor
+#' 
 #' @rdname ridge
 #' @exportS3Method coef ridge
 coef.ridge <-
@@ -310,8 +322,41 @@ function(x, digits = max(5, getOption("digits") - 5),...) {
   invisible(x)
 }
 
+#' @description
+#' \code{vcov} extracts the estimated \eqn{p \times p} covariance matrices of the coefficients for each value of the shrinkage factor.
 #' @rdname ridge
 #' @exportS3Method vcov ridge
 vcov.ridge <- function(object,  ...) {
 	object$cov
 }
+
+#' @description
+#' \code{best} extracts the optimal shrinkage values according to several criteria: 
+#' HKB: Hoerl et al. (1975); LW: Lawless & Wang (1976); GCV: Golub et al. (1975)
+#' @rdname ridge
+best <- function(object, ...) UseMethod("best")
+
+#' @returns A data.frame with one row for each of the HKB, LW, and GCV criteria
+#' @rdname ridge
+#' @exportS3Method best ridge
+best.ridge <- function(object, ...)
+{
+  if (!inherits(object, "ridge")) stop("This function only for 'ridge' objects")
+  crit <- object$criteria |> as.data.frame()
+  colnames(crit) <- "k"
+  if (!is.null(object$svd.D)) {
+   dd <- object$svd.D
+   df <- sapply(crit, function(x) sum(dd^2/(dd^2 + x)))
+   crit <- cbind(crit, df = df)
+  }
+  rn <- rownames(crit)
+  rownames(crit) <- gsub("^k", "", rn)
+  
+  # cat("modified HKB estimator is", format(object$kHKB), "\n")
+  # cat("modified L-W estimator is", format(object$kLW), "\n")
+  # cat("smallest value of GCV  at", format(object$kGCV), "\n")
+  
+  return(crit)
+}
+
+
