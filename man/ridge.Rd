@@ -7,6 +7,7 @@
 \alias{coef.ridge}
 \alias{print.ridge}
 \alias{vcov.ridge}
+\alias{ridge.lm}
 \alias{best}
 \alias{best.ridge}
 \title{Ridge Regression Estimates}
@@ -15,7 +16,17 @@ ridge(y, ...)
 
 \method{ridge}{formula}(formula, data, lambda = 0, df, svd = TRUE, contrasts = NULL, ...)
 
-\method{ridge}{default}(y, X, lambda = 0, df, svd = TRUE, ...)
+\method{ridge}{lm}(y, lambda = 0, df, svd = TRUE, ...)
+
+\method{ridge}{default}(
+  y,
+  X,
+  lambda = 0,
+  df,
+  svd = TRUE,
+  pool = c("scaled", "raw", "mahalanobis"),
+  ...
+)
 
 \method{coef}{ridge}(object, ...)
 
@@ -28,9 +39,12 @@ best(object, ...)
 \method{best}{ridge}(object, ...)
 }
 \arguments{
-\item{y}{A numeric vector containing the response variable. NAs not allowed.}
+\item{y}{For the default method, a numeric vector containing the response variable, or a
+matrix of several response variables (see \strong{Multivariate response} below). NAs not allowed.
+For the \code{lm} method, a linear model fitted by \code{\link[stats:lm]{stats::lm()}}, whose response, predictors
+(including any factor contrasts and transformed terms) and offset are used.}
 
-\item{\dots}{Other arguments, passed down to methods}
+\item{...}{Other arguments, passed down to methods}
 
 \item{formula}{For the \code{formula} method, a two-sided formula.}
 
@@ -46,42 +60,75 @@ to \code{lambda}}
 \item{svd}{If \code{TRUE} the SVD of the centered and scaled \code{X} matrix
 is returned in the \code{ridge} object.}
 
-\item{contrasts}{a list of contrasts to be used for some or all of factor terms in the formula. 
-See the \code{contrasts.arg} of \code{\link[stats]{model.matrix.default}}.}
+\item{contrasts}{a list of contrasts to be used for some or all of factor terms in the formula.
+See the \code{contrasts.arg} of \code{\link[stats:model.matrix.default]{stats::model.matrix.default()}}.}
 
 \item{X}{A matrix of predictor variables. NA's not allowed. Should not
 include a column of 1's for the intercept.}
+
+\item{pool}{For a multivariate response only: how the GCV criterion is pooled over responses
+to choose a common ridge constant. \code{"scaled"} (the default) sums each response's
+residual sum of squares divided by its OLS residual variance, so the result does not
+depend on the units of the responses; \code{"raw"} sums the residual sums of squares, as
+in \code{lm_multiv_ridge()} in the \strong{VARshrink} package (Lee & Kim);
+\code{"mahalanobis"} uses \eqn{\mathrm{tr}(\hat{\Sigma}^{-1} R^\top R)}{tr(Sigma^-1 R'R)}
+for the matrix \eqn{R} of residuals.}
 
 \item{x, object}{An object of class \code{ridge}}
 
 \item{digits}{For the \code{print} method, the number of digits to print.}
 }
 \value{
-A list with the following components: 
-\item{lambda}{The vector of ridge constants} 
-\item{df}{The vector of effective degrees of freedom corresponding to \code{lambda}} 
-\item{coef}{The matrix of estimated ridge regression coefficients} 
-\item{scales}{scalings used on the X matrix} 
-\item{kHKB}{HKB estimate of the ridge constant}
-\item{kLW}{L-W estimate of the ridge constant} 
-\item{GCV}{vector of GCV values} 
-\item{kGCV}{value of \code{lambda} with the minimum GCV}
-\item{criteria}{Collects the criteria \code{kHKB}, \code{kLW}, and \code{kGCV} in a named vector}
+A list with the following components:
+\itemize{
+\item \code{lambda}: The vector of ridge constants
+\item \code{df}: The vector of effective degrees of freedom corresponding to \code{lambda}
+\item \code{coef}: The matrix of estimated ridge regression coefficients
+\item \code{scales}: scalings used on the X matrix
+\item \code{kHKB}: HKB estimate of the ridge constant
+\item \code{kLW}: L-W estimate of the ridge constant
+\item \code{GCV}: vector of GCV values
+\item \code{kGCV}: value of \code{lambda} with the minimum GCV
+\item \code{criteria}: Collects the criteria \code{kHKB}, \code{kLW}, and \code{kGCV} in a named vector
+}
 
 If \code{svd==TRUE} (the default), the following are also included:
+\itemize{
+\item \code{svd.D}: Singular values of the \code{svd} of the scaled X matrix
+\item \code{svd.U}: Left singular vectors of the \code{svd} of the scaled X matrix.
+Rows correspond to observations and columns to dimensions.
+\item \code{svd.V}: Right singular vectors of the \code{svd} of the scaled X
+matrix. Rows correspond to variables and columns to dimensions.
+}
 
-\item{svd.D}{Singular values of the \code{svd} of the scaled X matrix}
-\item{svd.U}{Left singular vectors of the \code{svd} of the scaled X matrix.
-      Rows correspond to observations and columns to dimensions.}
-\item{svd.V}{Right singular vectors of the \code{svd} of the scaled X
-      matrix. Rows correspond to variables and columns to dimensions.} %% ...
+\strong{Multivariate response (experimental).} If the response is a matrix with more than one column (e.g.,
+\code{cbind(Y1, Y2) ~ x1 + x2} in the formula, a multivariate \code{lm()} fit, or a matrix \code{y}), all
+responses are fitted with the same ridge constants and the result is an object of class
+\code{"mlmridge"}. Its components follow those above, but:
+\itemize{
+\item \code{coef} is a list, with one \eqn{p \times q} matrix of coefficients for each value of \code{lambda}.
+\item \code{cov} is a list of the \eqn{p \times p} matrices that depend only on \code{X}; the covariance
+matrix of the coefficients for response \eqn{k} is \code{Sigma[k, k] * cov[[i]]}.
+\item \code{Sigma} is the residual covariance matrix of the responses, from the OLS fit.
+\item \code{mse} and \code{GCV} are matrices, with one column per response; \code{kHKB}, \code{kLW} and \code{kGCV} are
+vectors, and \code{criteria} is a matrix, with one row per response.
+\item \code{GCV.pooled} and \code{kGCV.pooled} give the GCV criterion pooled over responses (see \code{pool})
+and the value of \code{lambda} minimizing it.
+}
+
+Use \code{\link[=as.ridge]{as.ridge()}} to extract the results for one response as a \code{"ridge"} object.
+The estimator, \eqn{(\mathbf{X}^\top\mathbf{X} + \lambda \mathbf{I})^{-1} \mathbf{X}^\top \mathbf{Y}}{(X'X + lambda I)^-1 X'Y},
+is that of Breiman & Friedman (1997, eq. 6.3); the implementation was adapted from
+\code{lm_multiv_ridge()} in the \strong{VARshrink} package (Lee & Kim). For the same scaling of \code{X},
+\code{lambda} here is \eqn{n} times the \code{lambda} used there.
+This extension is experimental: its interface and results may change in future releases.
 
 A data.frame with one row for each of the HKB, LW, and GCV criteria
 }
 \description{
 The function \code{ridge} fits linear models by ridge regression, returning
 an object of class \code{ridge} designed to be used with the plotting
-methods in this package. 
+methods in this package.
 
 It is also designed to facilitate an alternative representation
 of the effects of shrinkage in the space of uncorrelated (PCA/SVD) components of the predictors.
@@ -91,13 +138,13 @@ by adding small positive constants \eqn{\lambda} to the diagonal elements of \eq
 the least squares solution to achieve a more favorable tradeoff between bias and variance (inverse of precision)
 of the coefficients.
 
-\deqn{\widehat{\mathbf{\beta}}^{\text{RR}}_k  = (\mathbf{X}^\top \mathbf{X} + \lambda \mathbf{I})^{-1} \mathbf{X}^\top \mathbf{y}  }
+\deqn{\widehat{\boldsymbol{\beta}}^{\text{RR}}_k  = (\mathbf{X}^\top \mathbf{X} + \lambda \mathbf{I})^{-1} \mathbf{X}^\top \mathbf{y}  }
 
 Ridge regression shrinkage can be parameterized in several ways.
 \itemize{
-   \item If a vector of \code{lambda} values is supplied, these are used directly in the ridge regression computations. 
-   \item Otherwise, if a vector \code{df} can be supplied the equivalent values for effective degrees of freedom corresponding to shrinkage,
-         going down from the number of predictors in the model.
+\item If a vector of \code{lambda} values is supplied, these are used directly in the ridge regression computations.
+\item Otherwise, if a vector \code{df} can be supplied the equivalent values for effective degrees of freedom corresponding to shrinkage,
+going down from the number of predictors in the model.
 }
 
 In either case, both \code{lambda} and
@@ -108,17 +155,31 @@ coefficients are given in terms of \code{lambda}.
 
 \code{vcov} extracts the estimated \eqn{p \times p} covariance matrices of the coefficients for each value of the shrinkage factor.
 
-\code{best} extracts the optimal shrinkage values according to several criteria: 
-HKB: Hoerl et al. (1975); LW: Lawless & Wang (1976); GCV: Golub et al. (1975)
+\code{best} extracts the optimal shrinkage values according to several criteria:
+HKB: Hoerl et al. (1975); LW: Lawless & Wang (1976); GCV: Golub et al. (1979)
 }
 \details{
-If an intercept is present in the model, its coefficient is not penalized. (If you want to penalize 
+If an intercept is present in the model, its coefficient is not penalized. (If you want to penalize
 an intercept, put in your own constant term and remove the intercept.)
 
-The predictors are centered, but not (yet) scaled in this implementation. 
+The predictors are centered and scaled to unit mean square (dividing by \eqn{n}), as in
+\code{\link[MASS:lm.ridge]{MASS::lm.ridge()}}, so the coefficients are on the scale of the standardized predictors.
 
 A number of the methods in the package assume that \code{lambda} is a vector of shrinkage constants
 increasing from \code{lambda[1] = 0}, or equivalently, a vector of \code{df} decreasing from \eqn{p}.
+
+\strong{Choosing the ridge constant.} Three criteria are computed. The HKB (Hoerl et al., 1975)
+and LW (Lawless & Wang, 1976) values are closed-form estimates from the OLS fit,
+\eqn{k_{HKB} = (p-2)\, s^2 / \hat{\boldsymbol{\beta}}^\top \hat{\boldsymbol{\beta}}}{k_HKB = (p-2) s^2 / b'b} and
+\eqn{k_{LW} = (p-2)\, s^2\, n / \hat{\mathbf{y}}^\top \hat{\mathbf{y}}}{k_LW = (p-2) s^2 n / yhat'yhat},
+where \eqn{s^2} is the
+residual mean square, so they need not be among the values of \code{lambda}. The GCV value
+(Golub et al., 1979) is the value of \code{lambda} (among those supplied) that minimizes the
+generalized cross-validation criterion.
+
+Because of the factor \eqn{p - 2}, the HKB and LW estimates are defined only for
+\eqn{p \ge 3} predictors (they would be 0 when \eqn{p = 2} and negative when \eqn{p = 1}).
+For \eqn{p < 3}, \code{kHKB} and \code{kLW} are \code{NA}, and the plot methods do not mark them.
 }
 \examples{
 
@@ -135,6 +196,10 @@ lridge <- ridge(longley.y, longley.X, lambda=lambda)
 lridge <- ridge(Employed ~ GNP + Unemployed + Armed.Forces + Population + Year + GNP.deflator, 
 		data=longley, lambda=lambda)
 
+# same, from a fitted lm() model
+longley.lm <- lm(Employed ~ GNP + Unemployed + Armed.Forces + Population + Year + GNP.deflator,
+		data=longley)
+lridge <- ridge(longley.lm, lambda=lambda)
 
 coef(lridge)
 
@@ -199,19 +264,31 @@ Regression: Some Simulations," \emph{Communications in Statistics}, 4,
 Lawless, J.F., and Wang, P. (1976), "A Simulation Study of Ridge and Other
 Regression Estimators," \emph{Communications in Statistics}, 5, 307-323.
 
-Golub G.H., Heath M., Wahba G. (1979) Generalized cross-validation as a method for choosing a good ridge parameter. 
-\emph{Technometrics}, \bold{21}:215–223. \doi{10.2307/1268518}
+Golub G.H., Heath M., Wahba G. (1979) Generalized cross-validation as a method for choosing a good ridge parameter.
+\emph{Technometrics}, \strong{21}:215–223. \doi{10.2307/1268518}
+
+Breiman, L. and Friedman, J. H. (1997). Predicting Multivariate Responses in Multiple Linear
+Regression. \emph{Journal of the Royal Statistical Society, Series B}, \strong{59}(1), 3-54.
+\doi{10.1111/1467-9868.00054}
+
+Lee, N. and Kim, S.-H. VARshrink: Shrinkage Estimation Methods for Vector Autoregressive
+Models. R package. \doi{10.32614/CRAN.package.VARshrink}
+
+Imdad Ullah, M., Aslam, M., and Altaf, S. (2018). lmridge: A Comprehensive R Package for
+Ridge Regression. \emph{The R Journal}, \strong{10}(2), 326–343. \doi{10.32614/RJ-2018-060}
 }
 \seealso{
-\code{\link[MASS]{lm.ridge}} for other implementations of ridge regression
+\code{\link[MASS:lm.ridge]{MASS::lm.ridge()}} for other implementations of ridge regression.
+The \strong{lmridge} package (Imdad Ullah et al., 2018) provides many estimators of the
+ridge constant and other ridge statistics.
 
-\code{\link{traceplot}}, \code{\link{plot.ridge}},
-\code{\link{pairs.ridge}}, \code{\link{plot3d.ridge}}, for 1D, 2D, 3D plotting methods
+\code{\link[=traceplot]{traceplot()}}, \code{\link[=plot.ridge]{plot.ridge()}},
+\code{\link[=pairs.ridge]{pairs.ridge()}}, \code{\link[=plot3d.ridge]{plot3d.ridge()}}, for 1D, 2D, 3D plotting methods
 
-\code{\link{pca.ridge}}, \code{\link{biplot.ridge}},
-\code{\link{biplot.pcaridge}} for views in PCA/SVD space
+\code{\link[=pca.ridge]{pca.ridge()}}, \code{\link[=biplot.ridge]{biplot.ridge()}},
+\code{\link[=biplot.pcaridge]{biplot.pcaridge()}} for views in PCA/SVD space
 
-\code{\link{precision.ridge}} for measures of shrinkage and precision
+\code{\link[=precision.ridge]{precision.ridge()}} for measures of shrinkage and precision
 }
 \author{
 Michael Friendly

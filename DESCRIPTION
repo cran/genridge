@@ -1,15 +1,17 @@
 Package: genridge
 Type: Package
 Title: Generalized Ridge Trace Plots for Ridge Regression
-Version: 0.8.0
-Date: 2024-11-30
+Version: 0.8.1
+Date: 2026-11-20
 Authors@R: c(person("Michael", "Friendly", , "friendly@yorku.ca", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-3237-0941"))
            )
 Maintainer: Michael Friendly <friendly@yorku.ca>
-Depends: R (>= 3.5.0), car
+Depends: R (>= 4.1.0), car
 Imports: rgl, colorspace, splines
-Suggests: MASS, bestglm, vcdExtra
+Suggests: MASS, bestglm, heplots, knitr, rmarkdown, testthat (>=
+        3.0.0), vcdExtra, withr
+VignetteBuilder: knitr
 Description: The genridge package introduces generalizations of the standard univariate
   ridge trace plot used in ridge regression and related methods.  These graphical methods
   show both bias (actually, shrinkage) and precision, by plotting the covariance ellipsoids of the estimated
@@ -23,10 +25,12 @@ Language: en-US
 BugReports: https://github.com/friendly/genridge/issues
 URL: https://github.com/friendly/genridge,
         https://friendly.github.io/genridge/
-RoxygenNote: 7.3.2
 Encoding: UTF-8
+Config/roxygen2/version: 8.1.1
+Config/testthat/edition: 3
 NeedsCompilation: no
-Packaged: 2024-12-02 14:41:12 UTC; friendly
-Author: Michael Friendly [aut, cre] (<https://orcid.org/0000-0002-3237-0941>)
+Packaged: 2026-11-20 16:17:27 UTC; friendly
+Author: Michael Friendly [aut, cre] (ORCID:
+    <https://orcid.org/0000-0002-3237-0941>)
 Repository: CRAN
-Date/Publication: 2024-12-02 15:00:02 UTC
+Date/Publication: 2026-11-20 16:40:02 UTC

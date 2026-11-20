@@ -10,8 +10,8 @@
 #' @aliases ridge ridge.default ridge.formula coef.ridge print.ridge vcov.ridge
 #'
 #' @description  
-#' The function \code{ridge} fits linear models by ridge regression, returning
-#' an object of class \code{ridge} designed to be used with the plotting
+#' The function `ridge` fits linear models by ridge regression, returning
+#' an object of class `ridge` designed to be used with the plotting
 #' methods in this package. 
 #' 
 #' It is also designed to facilitate an alternative representation
@@ -22,88 +22,146 @@
 #' the least squares solution to achieve a more favorable tradeoff between bias and variance (inverse of precision)
 #' of the coefficients.
 #' 
-#' \deqn{\widehat{\mathbf{\beta}}^{\text{RR}}_k  = (\mathbf{X}^\top \mathbf{X} + \lambda \mathbf{I})^{-1} \mathbf{X}^\top \mathbf{y}  }
+#' \deqn{\widehat{\boldsymbol{\beta}}^{\text{RR}}_k  = (\mathbf{X}^\top \mathbf{X} + \lambda \mathbf{I})^{-1} \mathbf{X}^\top \mathbf{y}  }
 #' 
 #' Ridge regression shrinkage can be parameterized in several ways.
-#' \itemize{
-#'    \item If a vector of \code{lambda} values is supplied, these are used directly in the ridge regression computations. 
-#'    \item Otherwise, if a vector \code{df} can be supplied the equivalent values for effective degrees of freedom corresponding to shrinkage,
-#'          going down from the number of predictors in the model.
-#' }
+#'
+#' * If a vector of `lambda` values is supplied, these are used directly in the ridge regression computations.
+#' * Otherwise, if a vector `df` can be supplied the equivalent values for effective degrees of freedom corresponding to shrinkage,
+#'   going down from the number of predictors in the model.
+#'
 #' 
-#' In either case, both \code{lambda} and
-#' \code{df} are returned in the \code{ridge} object, but the \code{rownames} of the
-#' coefficients are given in terms of \code{lambda}.
+#' In either case, both `lambda` and
+#' `df` are returned in the `ridge` object, but the `rownames` of the
+#' coefficients are given in terms of `lambda`.
 #' 
 #' @details
 #' 
 #' If an intercept is present in the model, its coefficient is not penalized. (If you want to penalize 
 #' an intercept, put in your own constant term and remove the intercept.)
 #' 
-#' The predictors are centered, but not (yet) scaled in this implementation. 
+#' The predictors are centered and scaled to unit mean square (dividing by \eqn{n}), as in
+#' [MASS::lm.ridge()], so the coefficients are on the scale of the standardized predictors.
+#'
+#' A number of the methods in the package assume that `lambda` is a vector of shrinkage constants
+#' increasing from `lambda[1] = 0`, or equivalently, a vector of `df` decreasing from \eqn{p}.
+#'
+#' **Choosing the ridge constant.** Three criteria are computed. The HKB (Hoerl et al., 1975)
+#' and LW (Lawless & Wang, 1976) values are closed-form estimates from the OLS fit,
+#' \eqn{k_{HKB} = (p-2)\, s^2 / \hat{\boldsymbol{\beta}}^\top \hat{\boldsymbol{\beta}}}{k_HKB = (p-2) s^2 / b'b} and
+#' \eqn{k_{LW} = (p-2)\, s^2\, n / \hat{\mathbf{y}}^\top \hat{\mathbf{y}}}{k_LW = (p-2) s^2 n / yhat'yhat},
+#' where \eqn{s^2} is the
+#' residual mean square, so they need not be among the values of `lambda`. The GCV value
+#' (Golub et al., 1979) is the value of `lambda` (among those supplied) that minimizes the
+#' generalized cross-validation criterion.
+#'
+#' Because of the factor \eqn{p - 2}, the HKB and LW estimates are defined only for
+#' \eqn{p \ge 3} predictors (they would be 0 when \eqn{p = 2} and negative when \eqn{p = 1}).
+#' For \eqn{p < 3}, `kHKB` and `kLW` are `NA`, and the plot methods do not mark them.
+#'
 #' 
-#' A number of the methods in the package assume that \code{lambda} is a vector of shrinkage constants
-#' increasing from \code{lambda[1] = 0}, or equivalently, a vector of \code{df} decreasing from \eqn{p}.
-#' 
-#' 
-#' @param y A numeric vector containing the response variable. NAs not allowed.
+#' @param y For the default method, a numeric vector containing the response variable, or a
+#'        matrix of several response variables (see **Multivariate response** below). NAs not allowed.
+#'        For the `lm` method, a linear model fitted by [stats::lm()], whose response, predictors
+#'        (including any factor contrasts and transformed terms) and offset are used.
 #' @param X A matrix of predictor variables. NA's not allowed. Should not
 #'        include a column of 1's for the intercept.
-#' @param formula For the \code{formula} method, a two-sided formula.
-#' @param data For the \code{formula} method, data frame within which to
+#' @param formula For the `formula` method, a two-sided formula.
+#' @param data For the `formula` method, data frame within which to
 #'        evaluate the formula.
 #' @param lambda A scalar or vector of ridge constants. A value of 0
 #'        corresponds to ordinary least squares.
 #' @param df A scalar or vector of effective degrees of freedom corresponding
-#'        to \code{lambda}
-#' @param svd If \code{TRUE} the SVD of the centered and scaled \code{X} matrix
-#'        is returned in the \code{ridge} object.
-#' @param contrasts a list of contrasts to be used for some or all of factor terms in the formula. 
-#'        See the \code{contrasts.arg} of \code{\link[stats]{model.matrix.default}}.
-#' @param x,object An object of class \code{ridge}
-#' @param \dots Other arguments, passed down to methods
-#' @param digits For the \code{print} method, the number of digits to print.
+#'        to `lambda`
+#' @param svd If `TRUE` the SVD of the centered and scaled `X` matrix
+#'        is returned in the `ridge` object.
+#' @param contrasts a list of contrasts to be used for some or all of factor terms in the formula.
+#'        See the `contrasts.arg` of [stats::model.matrix.default()].
+#' @param pool For a multivariate response only: how the GCV criterion is pooled over responses
+#'        to choose a common ridge constant. `"scaled"` (the default) sums each response's
+#'        residual sum of squares divided by its OLS residual variance, so the result does not
+#'        depend on the units of the responses; `"raw"` sums the residual sums of squares, as
+#'        in `lm_multiv_ridge()` in the **VARshrink** package (Lee & Kim);
+#'        `"mahalanobis"` uses \eqn{\mathrm{tr}(\hat{\Sigma}^{-1} R^\top R)}{tr(Sigma^-1 R'R)}
+#'        for the matrix \eqn{R} of residuals.
+#' @param x,object An object of class `ridge`
+#' @param ... Other arguments, passed down to methods
+#' @param digits For the `print` method, the number of digits to print.
 #' 
 #' @return A list with the following components: 
-#' \item{lambda}{The vector of ridge constants} 
-#' \item{df}{The vector of effective degrees of freedom corresponding to \code{lambda}} 
-#' \item{coef}{The matrix of estimated ridge regression coefficients} 
-#' \item{scales}{scalings used on the X matrix} 
-#' \item{kHKB}{HKB estimate of the ridge constant}
-#' \item{kLW}{L-W estimate of the ridge constant} 
-#' \item{GCV}{vector of GCV values} 
-#' \item{kGCV}{value of \code{lambda} with the minimum GCV}
-#' \item{criteria}{Collects the criteria \code{kHKB}, \code{kLW}, and \code{kGCV} in a named vector}
+#'
+#' * `lambda`: The vector of ridge constants
+#' * `df`: The vector of effective degrees of freedom corresponding to `lambda`
+#' * `coef`: The matrix of estimated ridge regression coefficients
+#' * `scales`: scalings used on the X matrix
+#' * `kHKB`: HKB estimate of the ridge constant
+#' * `kLW`: L-W estimate of the ridge constant
+#' * `GCV`: vector of GCV values
+#' * `kGCV`: value of `lambda` with the minimum GCV
+#' * `criteria`: Collects the criteria `kHKB`, `kLW`, and `kGCV` in a named vector
 #' 
-#' If \code{svd==TRUE} (the default), the following are also included:
+#' If `svd==TRUE` (the default), the following are also included:
 #' 
-#' \item{svd.D}{Singular values of the \code{svd} of the scaled X matrix}
-#' \item{svd.U}{Left singular vectors of the \code{svd} of the scaled X matrix.
-#'       Rows correspond to observations and columns to dimensions.}
-#' \item{svd.V}{Right singular vectors of the \code{svd} of the scaled X
-#'       matrix. Rows correspond to variables and columns to dimensions.} %% ...
+#' * `svd.D`: Singular values of the `svd` of the scaled X matrix
+#' * `svd.U`: Left singular vectors of the `svd` of the scaled X matrix.
+#'   Rows correspond to observations and columns to dimensions.
+#' * `svd.V`: Right singular vectors of the `svd` of the scaled X
+#'   matrix. Rows correspond to variables and columns to dimensions.
+#'
+#' **Multivariate response (experimental).** If the response is a matrix with more than one column (e.g.,
+#' `cbind(Y1, Y2) ~ x1 + x2` in the formula, a multivariate `lm()` fit, or a matrix `y`), all
+#' responses are fitted with the same ridge constants and the result is an object of class
+#' `"mlmridge"`. Its components follow those above, but:
+#'
+#' * `coef` is a list, with one \eqn{p \times q} matrix of coefficients for each value of `lambda`.
+#' * `cov` is a list of the \eqn{p \times p} matrices that depend only on `X`; the covariance
+#'   matrix of the coefficients for response \eqn{k} is `Sigma[k, k] * cov[[i]]`.
+#' * `Sigma` is the residual covariance matrix of the responses, from the OLS fit.
+#' * `mse` and `GCV` are matrices, with one column per response; `kHKB`, `kLW` and `kGCV` are
+#'   vectors, and `criteria` is a matrix, with one row per response.
+#' * `GCV.pooled` and `kGCV.pooled` give the GCV criterion pooled over responses (see `pool`)
+#'   and the value of `lambda` minimizing it.
+#'
+#' Use [as.ridge()] to extract the results for one response as a `"ridge"` object.
+#' The estimator, \eqn{(\mathbf{X}^\top\mathbf{X} + \lambda \mathbf{I})^{-1} \mathbf{X}^\top \mathbf{Y}}{(X'X + lambda I)^-1 X'Y},
+#' is that of Breiman & Friedman (1997, eq. 6.3); the implementation was adapted from
+#' `lm_multiv_ridge()` in the **VARshrink** package (Lee & Kim). For the same scaling of `X`,
+#' `lambda` here is \eqn{n} times the `lambda` used there.
+#' This extension is experimental: its interface and results may change in future releases.
 #' @author Michael Friendly
 #' @importFrom stats coef coefficients contrasts lm.fit model.matrix model.offset model.response uniroot vcov
 #' @export
-#' @seealso \code{\link[MASS]{lm.ridge}} for other implementations of ridge regression
+#' @seealso [MASS::lm.ridge()] for other implementations of ridge regression.
+#' The **lmridge** package (Imdad Ullah et al., 2018) provides many estimators of the
+#' ridge constant and other ridge statistics.
 #' 
-#' \code{\link{traceplot}}, \code{\link{plot.ridge}},
-#' \code{\link{pairs.ridge}}, \code{\link{plot3d.ridge}}, for 1D, 2D, 3D plotting methods
+#' [traceplot()], [plot.ridge()],
+#' [pairs.ridge()], [plot3d.ridge()], for 1D, 2D, 3D plotting methods
 #' 
-#' \code{\link{pca.ridge}}, \code{\link{biplot.ridge}},
-#' \code{\link{biplot.pcaridge}} for views in PCA/SVD space
+#' [pca.ridge()], [biplot.ridge()],
+#' [biplot.pcaridge()] for views in PCA/SVD space
 #' 
-#' \code{\link{precision.ridge}} for measures of shrinkage and precision
+#' [precision.ridge()] for measures of shrinkage and precision
 #' 
 #' @references Hoerl, A. E., Kennard, R. W., and Baldwin, K. F. (1975), "Ridge
-#' Regression: Some Simulations," \emph{Communications in Statistics}, 4,
+#' Regression: Some Simulations," *Communications in Statistics*, 4,
 #' 105-123.
 #' 
 #' Lawless, J.F., and Wang, P. (1976), "A Simulation Study of Ridge and Other
-#' Regression Estimators," \emph{Communications in Statistics}, 5, 307-323.
+#' Regression Estimators," *Communications in Statistics*, 5, 307-323.
 #' 
 #' Golub G.H., Heath M., Wahba G. (1979) Generalized cross-validation as a method for choosing a good ridge parameter. 
-#' \emph{Technometrics}, \bold{21}:215–223. \doi{10.2307/1268518}
+#' *Technometrics*, **21**:215–223. \doi{10.2307/1268518}
+#' 
+#' Breiman, L. and Friedman, J. H. (1997). Predicting Multivariate Responses in Multiple Linear
+#' Regression. *Journal of the Royal Statistical Society, Series B*, **59**(1), 3-54.
+#' \doi{10.1111/1467-9868.00054}
+#' 
+#' Lee, N. and Kim, S.-H. VARshrink: Shrinkage Estimation Methods for Vector Autoregressive
+#' Models. R package. \doi{10.32614/CRAN.package.VARshrink}
+#' 
+#' Imdad Ullah, M., Aslam, M., and Altaf, S. (2018). lmridge: A Comprehensive R Package for
+#' Ridge Regression. *The R Journal*, **10**(2), 326–343. \doi{10.32614/RJ-2018-060}
 #' @keywords models regression
 #' @examples
 #' 
@@ -119,8 +177,12 @@
 #' # same, using formula interface
 #' lridge <- ridge(Employed ~ GNP + Unemployed + Armed.Forces + Population + Year + GNP.deflator, 
 #' 		data=longley, lambda=lambda)
-#' 
-#' 
+#'
+#' # same, from a fitted lm() model
+#' longley.lm <- lm(Employed ~ GNP + Unemployed + Armed.Forces + Population + Year + GNP.deflator,
+#' 		data=longley)
+#' lridge <- ridge(longley.lm, lambda=lambda)
+#'
 #' coef(lridge)
 #' 
 #' # standard trace plot
@@ -193,7 +255,7 @@ ridge.formula <- function(
 	
 	#code from MASS:::lm.ridge
 	m <- match.call(expand.dots = FALSE)
-	m$model <- m$x <- m$y <- m$contrasts <- m$... <- m$lambda <-m$df <- NULL
+	m$model <- m$x <- m$y <- m$contrasts <- m$... <- m$lambda <-m$df <- m$svd <- NULL
 	m[[1L]] <- as.name("model.frame")
 	m <- eval.parent(m)
 	Terms <- attr(m, "terms")
@@ -205,21 +267,145 @@ ridge.formula <- function(
 	if (!is.null(offset)) 
 		Y <- Y - offset
 	if (Inter <- attr(Terms, "intercept")) {
-		Xm <- colMeans(X[, -Inter])
+		Xm <- colMeans(X[, -Inter, drop = FALSE])
 		Ym <- mean(Y)
 		p <- p - 1
-		X <- X[, -Inter] - rep(Xm, rep(n, p))
+		X <- X[, -Inter, drop = FALSE] - rep(Xm, rep(n, p))
 		Y <- Y - Ym
 	}
-	ridge.default(Y, X, lambda=lambda, df=df, svd=svd)
+	ridge.default(Y, X, lambda=lambda, df=df, svd=svd, ...)
+}
+
+#' @rdname ridge
+#' @exportS3Method
+ridge.lm <- function(
+    y,
+    lambda = 0,
+    df,
+    svd = TRUE,
+    ...) {
+  if (inherits(y, "glm"))
+    stop("ridge() does not support glm objects; use a model fit by lm()")
+  if (!is.null(stats::weights(y)))
+    stop("ridge() does not support weighted least squares (lm() with weights)")
+
+  mf <- stats::model.frame(y)
+  Y <- model.response(mf)
+  X <- model.matrix(y)
+  offset <- model.offset(mf)
+  if (!is.null(offset))
+    Y <- Y - offset
+  # ridge.default() centers X and Y, so the intercept column is not needed
+  if (attr(stats::terms(y), "intercept"))
+    X <- X[, colnames(X) != "(Intercept)", drop = FALSE]
+  ridge.default(Y, X, lambda = lambda, df = df, svd = svd, ...)
 }
 
 
 #' @rdname ridge
-#' @exportS3Method  
+#' @exportS3Method
 ridge.default <-
-		function(y, X, lambda=0, df, svd=TRUE, ...){
-	#dimensions	
+		function(y, X, lambda=0, df, svd=TRUE, pool = c("scaled", "raw", "mahalanobis"), ...){
+
+	# ---- multivariate response: Y is an n x q matrix, q > 1; returns an "mlmridge" object ----
+	# One shared lambda for all responses (see dev/ridge_mlm-plan.md). The univariate code
+	# below is unchanged; this branch mirrors it, column by column where it can.
+	if (is.matrix(y) && ncol(y) > 1) {
+		pool <- match.arg(pool)
+		n <- nrow(X)
+		p <- ncol(X)
+		q <- ncol(y)
+		if (nrow(y) != n) stop("y and X must have the same number of rows")
+		if (is.null(colnames(y))) colnames(y) <- paste0("Y", seq_len(q))
+		ynames <- colnames(y)
+		#center X and Y
+		Xm <- colMeans(X)
+		ym <- colMeans(y)
+		X <- X - rep(Xm, rep(n, p))
+		y <- y - rep(ym, rep(n, q))
+		#scale X, as in MASS::lm.ridge
+		Xscale <- drop(rep(1/n, n) %*% X^2)^0.5
+		X <- as.matrix(X/rep(Xscale, rep(n, p)))
+
+		XPX <- crossprod(X)
+		XPY <- crossprod(X, y)
+		I <- diag(p)
+		lmfit <- lm.fit(X, y)
+		# residual covariance matrix (q x q); its diagonal is the univariate MSE of each response
+		Sigma <- crossprod(lmfit$residuals) / (n-p-1)
+		dimnames(Sigma) <- list(ynames, ynames)
+		MSE <- diag(Sigma)
+		HKB <- (p - 2) * MSE/colSums(lmfit$coefficients^2)
+		LW <- (p - 2) * MSE * n/colSums(lmfit$fitted.values^2)
+		if (p < 3) HKB[] <- LW[] <- NA_real_    # factor (p - 2): not defined for p < 3
+		names(HKB) <- names(LW) <- ynames
+
+		svd.x <- svd(X, nu = p, nv = p)
+		dd <- svd.x$d
+		u <- svd.x$u
+		v <- svd.x$v
+		if (missing(df)) {
+			df <- sapply(lambda, function(x) sum(dd^2/(dd^2 + x)))
+		}
+		else {
+			fun <- function(df, lambda) df - sum(dd^2/(dd^2 + lambda))
+			lambda <- sapply(df, FUN = function(df) uniroot(f = function(lambda) fun(df,
+											lambda), lower = 0, upper = 1000, maxiter = 10000)$root)
+		}
+
+		nl <- length(lambda)
+		coef <- cov <- vector("list", nl)
+		mse <- rss <- matrix(0, nl, q, dimnames = list(format(lambda), ynames))
+		rss.mahal <- rep(0, nl)
+		Sinv <- if (pool == "mahalanobis") solve(Sigma) else NULL
+		for(i in seq_len(nl)) {
+			XPXI <- solve(XPX + lambda[i] * I)
+			B <- XPXI %*% XPY
+			dimnames(B) <- list(colnames(X), ynames)
+			coef[[i]] <- B
+			# X part of the covariance of the coefficients; Var(vec B) = Sigma %x% cov[[i]]
+			V <- XPXI %*% XPX %*% XPXI
+			dimnames(V) <- list(colnames(X), colnames(X))
+			cov[[i]] <- V
+			res <- y - X %*% B
+			rss[i, ] <- colSums(res^2)
+			mse[i, ] <- rss[i, ] / (n-p)
+			if (pool == "mahalanobis") rss.mahal[i] <- sum(diag(Sinv %*% crossprod(res)))
+		}
+		names(coef) <- names(cov) <- format(lambda)
+
+		# GCV, per response (as in the univariate case) and pooled over responses
+		gcv.denom <- (n - sapply(lambda, function(k) sum(dd^2/(dd^2 + k))))^2
+		GCV <- rss / gcv.denom
+		GCV.pooled <- switch(pool,
+			scaled      = drop(rss %*% (1/MSE)) / gcv.denom,
+			raw         = rowSums(rss) / gcv.denom,
+			mahalanobis = rss.mahal / gcv.denom)
+		names(GCV.pooled) <- format(lambda)
+		kGCV <- apply(GCV, 2, function(g) lambda[which.min(g)])
+		kGCV.pooled <- lambda[which.min(GCV.pooled)]
+		criteria <- cbind(kHKB = HKB, kLW = LW, kGCV = kGCV)
+
+		result <- list(lambda=lambda, df=df,
+		               coef=coef, cov=cov, Sigma=Sigma,
+		               mse=mse, scales=Xscale,
+		               kHKB=HKB, kLW=LW,
+		               GCV=GCV, kGCV=kGCV,
+		               criteria = criteria,
+		               GCV.pooled = GCV.pooled, kGCV.pooled = kGCV.pooled, pool = pool)
+		if (svd) {
+			rownames(u) <- rownames(X)
+			colnames(u) <- colnames(v) <- paste("dim", 1:p, sep="")
+			rownames(v) <- colnames(X)
+			result <- c(result, list(svd.D=dd, svd.U=u, svd.V=v))
+		}
+		class(result) <- "mlmridge"
+		return(result)
+	}
+
+	# a one-column matrix response is univariate
+	if (is.matrix(y)) y <- y[, 1]
+	#dimensions
 	n <- nrow(X)
 	p <- ncol(X)
 	#center X and y
@@ -239,6 +425,7 @@ ridge.default <-
 	MSE <- sum(lmfit$residuals^2) / (n-p-1)
 	HKB <- (p - 2) * MSE/sum(lmfit$coefficients^2)
 	LW <- (p - 2) * MSE * n/sum(lmfit$fitted.values^2)
+	if (p < 3) HKB <- LW <- NA_real_         # factor (p - 2): not defined for p < 3
 	
 	# from ElemStatLearn:::simple.ridge
 	svd.x <- svd(X, nu = p, nv = p)
@@ -301,7 +488,7 @@ ridge.default <-
 
 
 #' @description
-#' \code{coef} extracts the estimated coefficients for each value of the shrinkage factor
+#' `coef` extracts the estimated coefficients for each value of the shrinkage factor
 #' 
 #' @rdname ridge
 #' @exportS3Method coef ridge
@@ -323,7 +510,7 @@ function(x, digits = max(5, getOption("digits") - 5),...) {
 }
 
 #' @description
-#' \code{vcov} extracts the estimated \eqn{p \times p} covariance matrices of the coefficients for each value of the shrinkage factor.
+#' `vcov` extracts the estimated \eqn{p \times p} covariance matrices of the coefficients for each value of the shrinkage factor.
 #' @rdname ridge
 #' @exportS3Method vcov ridge
 vcov.ridge <- function(object,  ...) {
@@ -331,9 +518,10 @@ vcov.ridge <- function(object,  ...) {
 }
 
 #' @description
-#' \code{best} extracts the optimal shrinkage values according to several criteria: 
-#' HKB: Hoerl et al. (1975); LW: Lawless & Wang (1976); GCV: Golub et al. (1975)
+#' `best` extracts the optimal shrinkage values according to several criteria: 
+#' HKB: Hoerl et al. (1975); LW: Lawless & Wang (1976); GCV: Golub et al. (1979)
 #' @rdname ridge
+#' @export
 best <- function(object, ...) UseMethod("best")
 
 #' @returns A data.frame with one row for each of the HKB, LW, and GCV criteria
@@ -346,7 +534,7 @@ best.ridge <- function(object, ...)
   colnames(crit) <- "k"
   if (!is.null(object$svd.D)) {
    dd <- object$svd.D
-   df <- sapply(crit, function(x) sum(dd^2/(dd^2 + x)))
+   df <- sapply(crit$k, function(k) sum(dd^2/(dd^2 + k)))
    crit <- cbind(crit, df = df)
   }
   rn <- rownames(crit)
